@@ -107,7 +107,7 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
   const showDiagram = mermaidCode && !isLoading && !isRendering && !error && !renderError
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-8 pb-32">
+    <div className="w-full h-full flex items-center justify-center p-8 pt-24 pb-32">
       {/* Show loading state */}
       {showLoading && (
         <div className="space-y-2 w-full max-w-2xl">
