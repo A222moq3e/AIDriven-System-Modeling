@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import mermaid from 'mermaid'
-import { Card, CardContent } from './ui/card'
 import { Skeleton } from './ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from './ui/alert'
 
@@ -105,51 +104,41 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
   // Determine what to show
   const showLoading = (isLoading || isRendering) && !mermaidCode
   const showError = (error || renderError) && !isLoading && !isRendering
-  const showEmpty = !mermaidCode && !isLoading && !isRendering && !error && !renderError
   const showDiagram = mermaidCode && !isLoading && !isRendering && !error && !renderError
 
   return (
-    <Card className="w-full">
-      <CardContent className="p-6">
-        {/* Show loading state */}
-        {showLoading && (
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-4 w-4/6" />
-          </div>
-        )}
+    <div className="w-full h-full flex items-center justify-center p-8 pt-24 pb-32">
+      {/* Show loading state */}
+      {showLoading && (
+        <div className="space-y-2 w-full max-w-2xl">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-4 w-4/6" />
+        </div>
+      )}
 
-        {/* Show error state */}
-        {showError && (
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              {error || renderError || 'Failed to render diagram'}
-            </AlertDescription>
-          </Alert>
-        )}
+      {/* Show error state */}
+      {showError && (
+        <Alert variant="destructive" className="max-w-2xl">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {error || renderError || 'Failed to render diagram'}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {/* Show empty state */}
-        {showEmpty && (
-          <div className="text-center text-muted-foreground py-8">
-            <p>Enter a prompt above to generate a Mermaid diagram</p>
-          </div>
-        )}
-
-        {/* Always render the ref container when we have mermaidCode or are rendering */}
-        {/* This ensures the ref is available when the async render completes */}
-        {(mermaidCode || isRendering) && (
-          <div
-            ref={diagramRef}
-            className={`mermaid-diagram flex justify-center items-center min-h-[200px] overflow-auto ${
-              showDiagram ? '' : 'hidden'
-            }`}
-          />
-        )}
-      </CardContent>
-    </Card>
+      {/* Always render the ref container when we have mermaidCode or are rendering */}
+      {/* This ensures the ref is available when the async render completes */}
+      {(mermaidCode || isRendering) && (
+        <div
+          ref={diagramRef}
+          className={`mermaid-diagram flex justify-center items-center w-full h-full overflow-auto ${
+            showDiagram ? '' : 'hidden'
+          }`}
+        />
+      )}
+    </div>
   )
 }
 
