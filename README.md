@@ -2,6 +2,9 @@
 
 An intelligent web application that generates Mermaid diagrams from natural language prompts using AI. Users can describe a diagram in plain text, and the system automatically converts it into visual Mermaid syntax and renders it as a diagram.
 
+## ERD 
+https://app.eraser.io/workspace/f3MkRV0Oo0kyLIl552qa?origin=share
+
 ## Project Overview
 
 This project provides a seamless interface for creating various types of diagrams (flowcharts, sequence diagrams, class diagrams, ER diagrams, etc.) through AI-powered text-to-diagram conversion. The application consists of a modern React frontend and an Express.js backend that integrates with OpenAI's API to generate Mermaid syntax from user prompts.
