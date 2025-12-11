@@ -20,18 +20,19 @@ export function LoginPage() {
     setError('')
     setIsLoading(true)
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    const result = login(email, password)
-    
-    if (result.success) {
-      navigate('/')
-    } else {
-      setError(result.error)
+    try {
+      const result = await login(email, password)
+      
+      if (result.success) {
+        navigate('/')
+      } else {
+        setError(result.error || 'Invalid email or password')
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to login')
+    } finally {
+      setIsLoading(false)
     }
-    
-    setIsLoading(false)
   }
 
   return (

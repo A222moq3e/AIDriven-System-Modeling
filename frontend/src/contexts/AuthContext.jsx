@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
 import { authStorage, loginUser, logoutUser, signupUser } from '../services/api'
 
 const AuthContext = createContext(null)
@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
     }
   }, [authState])
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     try {
       const { user, accessToken } = await loginUser({ email, password })
       setAuthState({ user, accessToken, isAuthenticated: true })
@@ -44,9 +44,9 @@ export function AuthProvider({ children }) {
     } catch (error) {
       return { success: false, error: error.message || 'Unable to login' }
     }
-  }
+  }, [])
 
-  const signup = async (email, password, name) => {
+  const signup = useCallback(async (email, password, name) => {
     try {
       const { user, accessToken } = await signupUser({ email, password, name })
       setAuthState({ user, accessToken, isAuthenticated: true })
@@ -54,14 +54,14 @@ export function AuthProvider({ children }) {
     } catch (error) {
       return { success: false, error: error.message || 'Unable to sign up' }
     }
-  }
+  }, [])
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     if (authState.accessToken) {
       await logoutUser(authState.accessToken)
     }
     setAuthState(initialState)
-  }
+  }, [authState.accessToken])
 
   const value = useMemo(() => ({
     user: authState.user,

@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from './ui/alert'
 import { MermaidDiagram } from './MermaidDiagram'
 import { generateMermaid } from '../services/api'
 import { cn } from '../lib/utils'
+import { useAuth } from '../contexts/AuthContext'
 
 /**
  * Main prompt page component
@@ -14,6 +15,7 @@ export function PromptPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isMock, setIsMock] = useState(false)
+  const { user, accessToken } = useAuth()
 
   const handleSubmit = useCallback(async (e) => {
     e?.preventDefault()
@@ -27,7 +29,10 @@ export function PromptPage() {
     setMermaidCode('')
 
     try {
-      const result = await generateMermaid(prompt.trim())
+      const result = await generateMermaid(prompt.trim(), {
+        userId: user?.id,
+        accessToken,
+      })
       setMermaidCode(result.mermaid)
       setIsMock(result.isMock || false)
     } catch (err) {
@@ -36,7 +41,7 @@ export function PromptPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [prompt])
+  }, [prompt, user?.id, accessToken])
 
   const handleCopyMermaid = useCallback(async () => {
     if (!mermaidCode) return
