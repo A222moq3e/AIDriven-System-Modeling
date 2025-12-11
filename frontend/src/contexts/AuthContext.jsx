@@ -57,10 +57,18 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logout = useCallback(async () => {
-    if (authState.accessToken) {
-      await logoutUser(authState.accessToken)
+    try {
+      if (authState.accessToken) {
+        await logoutUser(authState.accessToken)
+      }
+    } catch (error) {
+      // Log the error but don't block logout - always reset auth state
+      console.warn('Logout API call failed:', error.message)
+    } finally {
+      // Always reset auth state regardless of API call success/failure
+      // This ensures UI never remains in an inconsistent logged-in state
+      setAuthState(initialState)
     }
-    setAuthState(initialState)
   }, [authState.accessToken])
 
   const value = useMemo(() => ({
