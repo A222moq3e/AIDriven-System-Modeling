@@ -28,9 +28,8 @@ const diagramSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt field before saving
-diagramSchema.pre('save', function(next) {
+diagramSchema.pre('save', function() {
   this.updatedAt = Date.now();
-  next();
 });
 
 export default mongoose.model('Diagram', diagramSchema);

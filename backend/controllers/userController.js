@@ -1,5 +1,5 @@
 import User from '../models/User.js';
-import { hashPassword, comparePassword, generateId } from '../utils/crypto.js';
+import { hashPassword, comparePassword } from '../utils/crypto.js';
 import { generateAccessToken } from '../utils/jwt.js';
 
 /**
@@ -49,12 +49,8 @@ export const signup = async (req, res) => {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Generate user ID
-    const userId = generateId();
-
-    // Create user
+    // Create user (MongoDB will auto-generate _id)
     const newUser = new User({
-      _id: userId,
       email,
       name: name || undefined,
       password: hashedPassword,

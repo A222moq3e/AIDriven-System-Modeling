@@ -1,6 +1,5 @@
 import OpenAI from 'openai';
 import Diagram from '../models/Diagram.js';
-import { generateId } from '../utils/crypto.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -44,9 +43,8 @@ export const generateDiagram = async (req, res) => {
 
     let savedDiagram = null;
     if (userId) {
-      const diagramId = generateId();
+      // Create diagram (MongoDB will auto-generate _id)
       const newDiagram = new Diagram({
-        _id: diagramId,
         userId,
         prompt,
         mermaidCode: cleanCode,

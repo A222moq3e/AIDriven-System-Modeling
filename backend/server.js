@@ -4,6 +4,7 @@ import cors from 'cors';
 import connectDB from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
 import diagramRoutes from './routes/diagramRoutes.js';
+import { requestLogger } from './middleware/logger.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ connectDB().catch((error) => {
 // Middleware
 app.use(cors());
 app.use(express.json()); // For parsing application/json
+app.use(requestLogger); // Request logging middleware
 
 // Routes
 app.use('/api/users', userRoutes);

@@ -15,6 +15,7 @@ export function PromptPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isMock, setIsMock] = useState(false)
+  const [retryInfo, setRetryInfo] = useState(null)
   const { user, accessToken } = useAuth()
 
   const handleSubmit = useCallback(async (e) => {
@@ -27,6 +28,7 @@ export function PromptPage() {
     setIsLoading(true)
     setError(null)
     setMermaidCode('')
+    setRetryInfo(null)
 
     try {
       const result = await generateMermaid(prompt.trim(), {
@@ -35,6 +37,11 @@ export function PromptPage() {
       })
       setMermaidCode(result.mermaid)
       setIsMock(result.isMock || false)
+      if (result.retries > 0) {
+        setRetryInfo(`Generated successfully after ${result.retries} retr${result.retries === 1 ? 'y' : 'ies'}`)
+        // Clear retry info after 3 seconds
+        setTimeout(() => setRetryInfo(null), 3000)
+      }
     } catch (err) {
       console.error('Error generating Mermaid:', err)
       setError(err.message || 'Failed to generate diagram. Please try again.')
@@ -103,6 +110,11 @@ export function PromptPage() {
             )}
           </Button>
         </form>
+        {retryInfo && (
+          <Alert className="mt-2 bg-blue-50 border-blue-200">
+            <AlertDescription className="text-xs text-blue-800">{retryInfo}</AlertDescription>
+          </Alert>
+        )}
         {error && (
           <Alert variant="destructive" className="mt-2">
             <AlertDescription className="text-xs">{error}</AlertDescription>
