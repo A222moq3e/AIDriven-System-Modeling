@@ -1,35 +1,79 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
+import { authStorage, loginUser, logoutUser, signupUser } from '../services/api'
 
 const AuthContext = createContext(null)
 
-export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+const initialState = {
+  user: null,
+  accessToken: null,
+  isAuthenticated: false,
+}
 
-  // Check localStorage on mount
+export function AuthProvider({ children }) {
+  const [authState, setAuthState] = useState(initialState)
+
+  // Rehydrate session on mount
   useEffect(() => {
-    const authStatus = localStorage.getItem('isAuthenticated')
-    if (authStatus === 'true') {
-      setIsAuthenticated(true)
+    const stored = authStorage.load()
+    if (stored?.accessToken && stored?.user) {
+      setAuthState({
+        user: stored.user,
+        accessToken: stored.accessToken,
+        isAuthenticated: true,
+      })
     }
   }, [])
 
-  const login = (email, password) => {
-    // Dummy authentication
-    if (email === 'test@example.com' && password === '123456') {
-      setIsAuthenticated(true)
-      localStorage.setItem('isAuthenticated', 'true')
-      return { success: true }
+  // Persist whenever session changes
+  useEffect(() => {
+    if (authState.isAuthenticated) {
+      authStorage.save({
+        user: authState.user,
+        accessToken: authState.accessToken,
+      })
+    } else {
+      authStorage.clear()
     }
-    return { success: false, error: 'Invalid email or password' }
-  }
+  }, [authState])
 
-  const logout = () => {
-    setIsAuthenticated(false)
-    localStorage.removeItem('isAuthenticated')
-  }
+  const login = useCallback(async (email, password) => {
+    try {
+      const { user, accessToken } = await loginUser({ email, password })
+      setAuthState({ user, accessToken, isAuthenticated: true })
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message || 'Unable to login' }
+    }
+  }, [])
+
+  const signup = useCallback(async (email, password, name) => {
+    try {
+      const { user, accessToken } = await signupUser({ email, password, name })
+      setAuthState({ user, accessToken, isAuthenticated: true })
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message || 'Unable to sign up' }
+    }
+  }, [])
+
+  const logout = useCallback(async () => {
+    if (authState.accessToken) {
+      await logoutUser(authState.accessToken)
+    }
+    setAuthState(initialState)
+  }, [authState.accessToken])
+
+  const value = useMemo(() => ({
+    user: authState.user,
+    accessToken: authState.accessToken,
+    isAuthenticated: authState.isAuthenticated,
+    login,
+    signup,
+    logout,
+  }), [authState, login, signup, logout])
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

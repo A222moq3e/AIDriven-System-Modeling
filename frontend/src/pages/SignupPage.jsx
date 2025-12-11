@@ -5,20 +5,20 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Alert, AlertDescription } from '../components/ui/alert'
+import { useAuth } from '../contexts/AuthContext'
 
 export function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const { signup } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    setSuccess(false)
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -32,17 +32,19 @@ export function SignupPage() {
 
     setIsLoading(true)
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
+    try {
+      const result = await signup(email, password)
 
-    // Dummy signup - just show success
-    setSuccess(true)
-    setIsLoading(false)
-    
-    // Clear form
-    setEmail('')
-    setPassword('')
-    setConfirmPassword('')
+      if (result.success) {
+        navigate('/')
+      } else {
+        setError(result.error || 'Unable to create account')
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to create account')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -65,7 +67,7 @@ export function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isLoading || success}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -77,7 +79,7 @@ export function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={isLoading || success}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -89,7 +91,7 @@ export function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                disabled={isLoading || success}
+                disabled={isLoading}
               />
             </div>
             {error && (
@@ -97,13 +99,8 @@ export function SignupPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            {success && (
-              <Alert>
-                <AlertDescription>Account created (dummy)</AlertDescription>
-              </Alert>
-            )}
-            <Button type="submit" className="w-full" disabled={isLoading || success}>
-              {isLoading ? 'Creating account...' : success ? 'Account Created' : 'Sign Up'}
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Creating account...' : 'Sign Up'}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">

@@ -23,6 +23,11 @@ app.use(express.json()); // For parsing application/json
 app.use('/api/users', userRoutes);
 app.use('/api/diagrams', diagramRoutes);
 
+// Health check for frontend probes
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Basic route for testing
 app.get('/', (req, res) => {
   res.send('API is running...');
