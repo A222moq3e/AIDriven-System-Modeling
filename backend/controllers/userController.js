@@ -1,6 +1,4 @@
-import { db } from '../db/index.js';
-import { users } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import User from '../models/User.js';
 import { hashPassword, comparePassword, generateId } from '../utils/crypto.js';
 import { generateAccessToken } from '../utils/jwt.js';
 
@@ -39,13 +37,9 @@ export const signup = async (req, res) => {
 
   try {
     // Check if user already exists
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    const existingUser = await User.findOne({ email });
 
-    if (existingUser.length > 0) {
+    if (existingUser) {
       return res.status(409).json({ 
         success: false,
         message: 'User with this email already exists' 
@@ -59,33 +53,30 @@ export const signup = async (req, res) => {
     const userId = generateId();
 
     // Create user
-    const newUser = {
-      id: userId,
+    const newUser = new User({
+      _id: userId,
       email,
-      name: name || null,
+      name: name || undefined,
       password: hashedPassword,
-    };
+    });
 
-    const [createdUser] = await db
-      .insert(users)
-      .values(newUser)
-      .returning({
-        id: users.id,
-        email: users.email,
-        name: users.name,
-        createdAt: users.createdAt,
-      });
+    const createdUser = await newUser.save();
 
     // Generate access token
     const accessToken = generateAccessToken({ 
-      userId: createdUser.id, 
+      userId: createdUser._id.toString(), 
       email: createdUser.email 
     });
 
     res.status(201).json({
       success: true,
       data: {
-        user: createdUser,
+        user: {
+          id: createdUser._id.toString(),
+          email: createdUser.email,
+          name: createdUser.name,
+          createdAt: createdUser.createdAt,
+        },
         accessToken,
       },
     });
@@ -116,11 +107,7 @@ export const login = async (req, res) => {
 
   try {
     // Find user by email
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(401).json({ 
@@ -140,7 +127,7 @@ export const login = async (req, res) => {
 
     // Generate access token
     const accessToken = generateAccessToken({ 
-      userId: user.id, 
+      userId: user._id.toString(), 
       email: user.email 
     });
 
@@ -148,7 +135,7 @@ export const login = async (req, res) => {
       success: true,
       data: {
         user: {
-          id: user.id,
+          id: user._id.toString(),
           email: user.email,
           name: user.name,
           createdAt: user.createdAt,

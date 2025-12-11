@@ -1,6 +1,4 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from './schema.js';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -11,11 +9,21 @@ if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is not set');
 }
 
-// Create the connection
-const client = postgres(connectionString);
+// Connect to MongoDB
+mongoose.connect(connectionString);
 
-// Create the database instance
-export const db = drizzle(client, { schema });
+// Handle connection events
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB Connected successfully');
+});
 
-export { schema };
+mongoose.connection.on('error', (error) => {
+  console.error('MongoDB connection error:', error.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+export default mongoose;
 

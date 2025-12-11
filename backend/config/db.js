@@ -1,13 +1,25 @@
-import { db } from '../db/index.js';
-import { sql } from 'drizzle-orm';
+import mongoose from '../db/index.js';
 
 const connectDB = async () => {
   try {
-    // Test the connection by running a simple query
-    await db.execute(sql`SELECT 1`);
-    console.log('PostgreSQL Connected successfully');
+    // Mongoose connection is handled in db/index.js
+    // Wait for connection if not ready
+    if (mongoose.connection.readyState === 1) {
+      return; // Already connected
+    }
+    
+    await new Promise((resolve, reject) => {
+      if (mongoose.connection.readyState === 1) {
+        resolve();
+      } else {
+        mongoose.connection.once('connected', resolve);
+        mongoose.connection.once('error', reject);
+        // Timeout after 10 seconds
+        setTimeout(() => reject(new Error('Connection timeout')), 10000);
+      }
+    });
   } catch (error) {
-    console.error(`Database connection error: ${error.message}`);
+    console.error('Database connection error:', error.message);
     process.exit(1);
   }
 };

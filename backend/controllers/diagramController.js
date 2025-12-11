@@ -1,7 +1,5 @@
 import OpenAI from 'openai';
-import { db } from '../db/index.js';
-import { diagrams } from '../db/schema.js';
-import { eq, desc } from 'drizzle-orm';
+import Diagram from '../models/Diagram.js';
 import { generateId } from '../utils/crypto.js';
 import dotenv from 'dotenv';
 
@@ -47,25 +45,15 @@ export const generateDiagram = async (req, res) => {
     let savedDiagram = null;
     if (userId) {
       const diagramId = generateId();
-      const [createdDiagram] = await db
-        .insert(diagrams)
-        .values({
-          id: diagramId,
-          userId,
-          prompt,
-          mermaidCode: cleanCode,
-          type: type || 'flowchart',
-        })
-        .returning({
-          id: diagrams.id,
-          userId: diagrams.userId,
-          prompt: diagrams.prompt,
-          mermaidCode: diagrams.mermaidCode,
-          type: diagrams.type,
-          createdAt: diagrams.createdAt,
-        });
+      const newDiagram = new Diagram({
+        _id: diagramId,
+        userId,
+        prompt,
+        mermaidCode: cleanCode,
+        type: type || 'flowchart',
+      });
       
-      savedDiagram = createdDiagram;
+      savedDiagram = await newDiagram.save();
     }
 
     res.status(200).json({
@@ -73,7 +61,7 @@ export const generateDiagram = async (req, res) => {
       data: {
         mermaid: cleanCode,
         type: type || 'flowchart',
-        diagramId: savedDiagram ? savedDiagram.id : null,
+        diagramId: savedDiagram ? savedDiagram._id.toString() : null,
       },
     });
   } catch (error) {
@@ -99,15 +87,24 @@ export const getDiagrams = async (req, res) => {
   }
 
   try {
-    const userDiagrams = await db
-      .select()
-      .from(diagrams)
-      .where(eq(diagrams.userId, userId))
-      .orderBy(desc(diagrams.createdAt));
+    const userDiagrams = await Diagram.find({ userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Convert _id to id for consistency
+    const formattedDiagrams = userDiagrams.map(diagram => ({
+      id: diagram._id.toString(),
+      userId: diagram.userId,
+      prompt: diagram.prompt,
+      mermaidCode: diagram.mermaidCode,
+      type: diagram.type,
+      createdAt: diagram.createdAt,
+      updatedAt: diagram.updatedAt,
+    }));
 
     res.status(200).json({
       success: true,
-      data: userDiagrams,
+      data: formattedDiagrams,
     });
   } catch (error) {
     console.error(error);
