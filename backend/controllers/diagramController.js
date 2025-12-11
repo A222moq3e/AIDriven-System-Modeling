@@ -1,6 +1,9 @@
-const OpenAI = require('openai');
-const Diagram = require('../models/Diagram');
-const dotenv = require('dotenv');
+import OpenAI from 'openai';
+import { db } from '../db/index.js';
+import { diagrams } from '../db/schema.js';
+import { eq, desc } from 'drizzle-orm';
+import { generateId } from '../utils/crypto.js';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -11,11 +14,14 @@ const openai = new OpenAI({
 // @desc    Generate Mermaid code from prompt and Auto-Save
 // @route   POST /api/diagrams/generate
 // @access  Public (or Protected if we add middleware later)
-const generateDiagram = async (req, res) => {
+export const generateDiagram = async (req, res) => {
   const { prompt, type, userId } = req.body;
 
   if (!prompt) {
-    return res.status(400).json({ message: 'Prompt is required' });
+    return res.status(400).json({ 
+      success: false,
+      message: 'Prompt is required' 
+    });
   }
 
   try {
@@ -40,12 +46,26 @@ const generateDiagram = async (req, res) => {
 
     let savedDiagram = null;
     if (userId) {
-      savedDiagram = await Diagram.create({
-        userId,
-        prompt,
-        mermaidCode: cleanCode,
-        type: type || 'flowchart',
-      });
+      const diagramId = generateId();
+      const [createdDiagram] = await db
+        .insert(diagrams)
+        .values({
+          id: diagramId,
+          userId,
+          prompt,
+          mermaidCode: cleanCode,
+          type: type || 'flowchart',
+        })
+        .returning({
+          id: diagrams.id,
+          userId: diagrams.userId,
+          prompt: diagrams.prompt,
+          mermaidCode: diagrams.mermaidCode,
+          type: diagrams.type,
+          createdAt: diagrams.createdAt,
+        });
+      
+      savedDiagram = createdDiagram;
     }
 
     res.status(200).json({
@@ -53,57 +73,47 @@ const generateDiagram = async (req, res) => {
       data: {
         mermaid: cleanCode,
         type: type || 'flowchart',
-        diagramId: savedDiagram ? savedDiagram._id : null,
+        diagramId: savedDiagram ? savedDiagram.id : null,
       },
     });
   } catch (error) {
     console.error("OpenAI Error:", error);
-    res.status(500).json({ message: 'Failed to generate diagram' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to generate diagram' 
+    });
   }
 };
 
 // @desc    Get user diagrams
 // @route   GET /api/diagrams/:userId
 // @access  Public
-const getDiagrams = async (req, res) => {
+export const getDiagrams = async (req, res) => {
   const { userId } = req.params;
 
+  if (!userId) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'User ID is required' 
+    });
+  }
+
   try {
-    const diagrams = await Diagram.find({ userId }).sort({ createdAt: -1 });
+    const userDiagrams = await db
+      .select()
+      .from(diagrams)
+      .where(eq(diagrams.userId, userId))
+      .orderBy(desc(diagrams.createdAt));
 
     res.status(200).json({
       success: true,
-      data: diagrams,
+      data: userDiagrams,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch diagrams' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch diagrams' 
+    });
   }
 };
-
-module.exports = {
-  generateDiagram,
-  getDiagrams,
-};
-/*
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-const response = await openai.responses.create({
-  prompt: {
-    "id": "pmpt_6925efc645008196aef1bed0c7ea4c4b0e39ebb9f904648c",
-    "version": "2"
-  },
-  input: [],
-  reasoning: {},
-  store: true,
-  include: [
-    "reasoning.encrypted_content",
-    "web_search_call.action.sources"
-  ]
-});
-
-*/
