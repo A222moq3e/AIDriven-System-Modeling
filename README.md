@@ -11,25 +11,31 @@ This project provides a seamless interface for creating various types of diagram
 
 ### Key Features
 
-- **AI-Powered Generation**: Converts natural language prompts into Mermaid diagram syntax using OpenAI
+- **AI-Powered Generation**: Converts natural language prompts into Mermaid diagram syntax using OpenAI GPT-4
+- **Automatic Retry Logic**: Validates generated syntax and automatically retries up to 5 times if invalid
+- **User Authentication**: Secure signup, login, and logout with JWT tokens
+- **Diagram Persistence**: Save and retrieve user-generated diagrams
 - **Multiple Diagram Types**: Supports flowcharts, sequence diagrams, class diagrams, ER diagrams, Gantt charts, and more
 - **Modern UI**: Clean, minimal interface with full-screen diagram display
 - **Mock Data Support**: Frontend works independently with mock data when backend is unavailable
-- **Real-time Rendering**: Instant diagram rendering using Mermaid.js
+- **Real-time Rendering**: Instant diagram rendering using Mermaid.js with syntax validation
 - **Responsive Design**: Works seamlessly across different screen sizes
+- **Request Logging**: Comprehensive backend logging for debugging and monitoring
 
 ## Architecture
 
 The application follows a client-server architecture:
 
-1. **Frontend**: React application that handles user interactions and diagram rendering
-2. **Backend**: Express.js API server that processes prompts and communicates with OpenAI
-3. **AI Integration**: OpenAI API generates Mermaid syntax from user prompts
+1. **Frontend**: React application that handles user interactions, diagram rendering, and syntax validation
+2. **Backend**: Express.js API server that processes prompts, communicates with OpenAI, and manages user data
+3. **Database**: MongoDB for storing user accounts and diagrams
+4. **AI Integration**: OpenAI API generates Mermaid syntax from user prompts
 
 ### Flow
 
 ```
-User Input → Frontend → Backend API → OpenAI API → Mermaid Syntax → Frontend → Rendered Diagram
+User Input → Frontend → Backend API → OpenAI API → Mermaid Syntax → 
+Frontend Validation → (Retry if invalid) → Rendered Diagram
 ```
 
 ## Technology Stack
@@ -41,7 +47,8 @@ User Input → Frontend → Backend API → OpenAI API → Mermaid Syntax → Fr
 - **Tailwind CSS** - Utility-first CSS framework for styling
 - **shadcn/ui** - High-quality component library built on Radix UI
 - **Radix UI** - Accessible component primitives
-- **Mermaid.js** - Diagram rendering library
+- **Mermaid.js** - Diagram rendering and syntax validation library
+- **React Router** - Client-side routing
 - **class-variance-authority** - Component variant management
 - **clsx & tailwind-merge** - Utility functions for conditional styling
 
@@ -49,8 +56,11 @@ User Input → Frontend → Backend API → OpenAI API → Mermaid Syntax → Fr
 
 - **Express.js 5** - Fast, unopinionated web framework for Node.js
 - **MongoDB** - NoSQL database for data storage
-- **Drizzle ORM** - TypeScript ORM for database operations
+- **Mongoose** - MongoDB object modeling for Node.js
 - **OpenAI API** - AI service for generating Mermaid syntax from prompts
+- **JWT** - JSON Web Tokens for authentication
+- **bcryptjs** - Password hashing
+- **CORS** - Cross-origin resource sharing
 
 ## Project Structure
 
@@ -58,11 +68,22 @@ User Input → Frontend → Backend API → OpenAI API → Mermaid Syntax → Fr
 AIDriven-System-Modeling/
 ├── frontend/              # React frontend application
 │   ├── src/
-│   │   ├── components/   # React components
+│   │   ├── components/   # React components (MermaidDiagram, PromptPage, etc.)
+│   │   ├── pages/        # Page components (Login, Signup)
+│   │   ├── contexts/     # React contexts (AuthContext)
 │   │   ├── services/     # API services and mock data
-│   │   └── lib/          # Utility functions
+│   │   ├── lib/          # Utility functions
+│   │   └── main.jsx      # Application entry point
 │   └── package.json
 ├── backend/              # Express.js backend API
+│   ├── controllers/      # Request handlers
+│   ├── models/           # Mongoose models (User, Diagram)
+│   ├── routes/           # API routes
+│   ├── middleware/       # Custom middleware (auth, logger)
+│   ├── config/           # Configuration files
+│   ├── db/               # Database connection
+│   ├── utils/            # Utility functions (crypto, jwt)
+│   ├── server.js          # Express server
 │   └── package.json
 └── README.md
 ```
@@ -73,8 +94,8 @@ AIDriven-System-Modeling/
 
 - Node.js (v18 or higher)
 - npm or yarn
-- MongoDB (for backend)
-- OpenAI API key (for AI functionality)
+- MongoDB (local installation or MongoDB Atlas account)
+- OpenAI API key (get one at https://platform.openai.com/api-keys)
 
 ### Frontend Setup
 
@@ -91,26 +112,38 @@ The frontend will be available at `http://localhost:5173`
 ```bash
 cd backend
 npm install
-# Configure environment variables
-npm start
+# Copy .env.example to .env and configure
+npm run dev
 ```
 
-The backend API will be available at `http://localhost:3000`
+The backend API will be available at `http://localhost:5000`
 
 ### Environment Variables
 
 **Frontend** (`.env`):
-```
-VITE_API_URL=http://localhost:3000
+```env
+VITE_API_URL=http://localhost:5000
 VITE_USE_MOCK=false
 ```
 
 **Backend** (`.env`):
+```env
+# OpenAI API Configuration
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Database Configuration
+# Local MongoDB: mongodb://localhost:27017/your_database_name
+# MongoDB Atlas: mongodb+srv://username:password@cluster.mongodb.net/your_database_name
+DATABASE_URL=mongodb://localhost:27017/your_database_name
+
+# Server Configuration
+PORT=5000
+
+# JWT Secret
+ACCESS_TOKEN_SECRET=your-access-token-secret-change-in-production
 ```
-OPENAI_API_KEY=your_openai_api_key
-MONGODB_URI=your_mongodb_connection_string
-PORT=3000
-```
+
+You can copy `backend/.env.example` to `backend/.env` and fill in your values.
 
 ## Development
 
@@ -118,21 +151,99 @@ PORT=3000
 
 The frontend includes mock data support, allowing development to continue even when the backend is unavailable. Set `VITE_USE_MOCK=true` to always use mock data, or the frontend will automatically fallback to mock data if the backend is unreachable.
 
-### Features
-
+**Key Features:**
 - **Full-screen diagram display**: Diagrams take up the entire viewport
 - **Minimal prompt interface**: Compact input box at the bottom with circular submit button
 - **Real-time rendering**: Diagrams render instantly as Mermaid syntax is received
+- **Syntax validation**: Automatic validation and retry logic for invalid Mermaid syntax
 - **Error handling**: Graceful error handling with user-friendly messages
 - **Loading states**: Visual feedback during diagram generation
+- **Retry feedback**: Shows notification when retries were needed
+
+### Backend Development
+
+The backend includes comprehensive request logging middleware that logs:
+- Request method, path, and full URL
+- Query parameters and route parameters
+- Request body (with password fields hidden)
+- Response status and duration
+
+**Key Features:**
+- **User Authentication**: JWT-based authentication with secure password hashing
+- **Diagram Management**: Save and retrieve user diagrams
+- **Request Logging**: Detailed logging for all API requests
+- **Error Handling**: Comprehensive error handling with appropriate status codes
 
 ## API Endpoints
 
-### Backend API
+### Authentication
 
-- `POST /api/generate-mermaid` - Generate Mermaid syntax from text prompt
-  - Request body: `{ "prompt": "string" }`
-  - Response: `{ "mermaid": "string" }`
+- `POST /api/users/signup` - Create a new user account
+  - Request body: `{ "email": "string", "password": "string", "name": "string" }`
+  - Response: `{ "success": true, "data": { "user": {...}, "accessToken": "string" } }`
+
+- `POST /api/users/login` - Login user
+  - Request body: `{ "email": "string", "password": "string" }`
+  - Response: `{ "success": true, "data": { "user": {...}, "accessToken": "string" } }`
+
+- `POST /api/users/logout` - Logout user (requires authentication)
+  - Headers: `Authorization: Bearer <token>`
+  - Response: `{ "success": true, "message": "Logged out successfully" }`
+
+### Diagrams
+
+- `POST /api/diagrams/generate` - Generate Mermaid syntax from text prompt
+  - Request body: `{ "prompt": "string", "type": "string" (optional), "userId": "string" (optional) }`
+  - Response: `{ "success": true, "data": { "mermaid": "string", "type": "string", "diagramId": "string" } }`
+
+- `GET /api/diagrams/:userId` - Get all diagrams for a user
+  - Response: `{ "success": true, "data": [...] }`
+
+### Health Check
+
+- `GET /health` - Check if backend is running
+  - Response: `{ "status": "ok" }`
+
+## Features in Detail
+
+### Automatic Retry Logic
+
+The frontend automatically validates all generated Mermaid syntax using Mermaid's built-in renderer. If the syntax is invalid, the system automatically retries the same prompt up to 5 times:
+
+1. User submits prompt
+2. Backend generates Mermaid code via OpenAI
+3. Frontend validates syntax by attempting to render
+4. If invalid → automatically retry (up to 5 attempts)
+5. If valid → display diagram
+6. If all retries fail → show error message
+
+Users are notified when retries were needed with a success message.
+
+### User Authentication
+
+- Secure password hashing using bcryptjs
+- JWT tokens for session management
+- Protected routes with authentication middleware
+- User-specific diagram storage
+
+### Database Schema
+
+**User Model:**
+- `_id`: MongoDB ObjectId (auto-generated)
+- `email`: String (unique, required)
+- `name`: String (optional)
+- `password`: String (hashed, required)
+- `createdAt`: Date
+- `updatedAt`: Date
+
+**Diagram Model:**
+- `_id`: MongoDB ObjectId (auto-generated)
+- `userId`: String (required)
+- `prompt`: String (required)
+- `mermaidCode`: String (required)
+- `type`: String (default: 'flowchart')
+- `createdAt`: Date
+- `updatedAt`: Date
 
 ## Contributing
 
@@ -145,7 +256,6 @@ This project is for educational purposes.
 ## Acknowledgments
 
 - OpenAI for AI capabilities
-- Mermaid.js for diagram rendering
+- Mermaid.js for diagram rendering and validation
 - shadcn/ui for component library
 - All open-source contributors
-
