@@ -15,6 +15,8 @@ const initMermaid = () => {
       startOnLoad: false,
       theme: 'default',
       securityLevel: 'loose',
+      logLevel: 'fatal', // Suppress error messages in console/DOM
+      suppressErrors: true, // Don't render error diagrams
     })
     mermaidInitialized = true
   }
@@ -22,6 +24,7 @@ const initMermaid = () => {
 
 /**
  * Validate Mermaid syntax by attempting to render it
+ * Suppresses all errors to prevent technical messages from showing to users
  * @param {string} mermaidCode - Mermaid code to validate
  * @returns {Promise<boolean>} True if valid, false if invalid
  */
@@ -32,13 +35,30 @@ const validateMermaidSyntax = async (mermaidCode) => {
 
   try {
     initMermaid()
-    // Generate a unique ID for validation
+    // Generate a unique ID for validation that won't be added to DOM
     const id = `validate-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
-    // Try to render - if it fails, syntax is invalid
-    await mermaid.render(id, mermaidCode)
-    return true
+    
+    // Try to parse and render - if it fails, syntax is invalid
+    // The render method validates the syntax without adding to DOM
+    try {
+      const result = await mermaid.render(id, mermaidCode)
+      // Clean up any rendered elements that might have been created
+      const element = document.getElementById(id)
+      if (element) {
+        element.remove()
+      }
+      return true
+    } catch (renderError) {
+      // Silently fail - don't expose Mermaid syntax errors to user
+      // Clean up any error elements that Mermaid might have created
+      const element = document.getElementById(id)
+      if (element) {
+        element.remove()
+      }
+      return false
+    }
   } catch (error) {
-    console.warn('Mermaid syntax validation failed:', error.message)
+    // Catch any initialization or other errors
     return false
   }
 }
@@ -159,8 +179,9 @@ export async function generateMermaid(prompt, { type, userId, accessToken } = {}
   }
 
   // If we get here, all retries failed
+  // Provide a user-friendly error message without exposing technical Mermaid errors
   throw new Error(
-    `Failed to generate valid Mermaid syntax after ${MAX_RETRIES} attempts. ${lastError?.message || 'Unknown error'}`
+    `Unable to generate diagram after ${MAX_RETRIES} attempts. Please try rephrasing your prompt or selecting a different diagram type.`
   )
 }
 

@@ -24,6 +24,8 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
       startOnLoad: false,
       theme: 'default',
       securityLevel: 'loose',
+      logLevel: 'error', // Only log critical errors
+      suppressErrors: true, // Don't render error diagrams with syntax errors
       flowchart: {
         useMaxWidth: true,
         htmlLabels: true,
@@ -103,7 +105,8 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
       } catch (err) {
         console.error('Mermaid rendering error:', err)
         if (isMounted) {
-          setRenderError(err.message || 'Failed to render diagram')
+          // Show user-friendly error without exposing technical details
+          setRenderError('Unable to display the diagram. Please try generating a new one.')
           if (diagramRef.current) {
             diagramRef.current.innerHTML = ''
           }

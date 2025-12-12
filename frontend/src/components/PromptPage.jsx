@@ -21,8 +21,6 @@ const DIAGRAM_TYPES = [
   { value: 'entity relationship diagram', label: 'Entity Relationship Diagram (ERD)' },
   { value: 'user journey diagram', label: 'User Journey Diagram' },
   { value: 'gantt chart', label: 'Gantt Chart' },
-  { value: 'c4 diagram', label: 'C4 Diagram' },
-  { value: 'zenuml diagram', label: 'ZenUML Diagram' },
 ]
 
 /**
