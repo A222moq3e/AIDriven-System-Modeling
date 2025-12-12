@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '../components/ui/alert'
 import { useAuth } from '../contexts/AuthContext'
 
 export function SignupPage() {
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -30,10 +31,15 @@ export function SignupPage() {
       return
     }
 
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters')
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      const result = await signup(email, password)
+      const result = await signup(username, email, password)
 
       if (result.success) {
         navigate('/')
@@ -58,6 +64,22 @@ export function SignupPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="signup-username">Username</Label>
+              <Input
+                id="signup-username"
+                type="text"
+                placeholder="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                disabled={isLoading}
+                minLength={3}
+                maxLength={30}
+                pattern="[a-zA-Z0-9_]{3,30}"
+                title="Username must be 3-30 characters and contain only letters, numbers, and underscores"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="signup-email">Email</Label>
               <Input

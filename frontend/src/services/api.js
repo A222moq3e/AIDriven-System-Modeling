@@ -178,11 +178,11 @@ export async function loginUser({ email, password }) {
   }
 }
 
-export async function signupUser({ email, password, name }) {
+export async function signupUser({ username, email, password }) {
   const response = await fetch(`${API_BASE_URL}/api/users/signup`, {
     method: 'POST',
     headers: buildAuthHeaders(),
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ username, email, password }),
   })
 
   const data = await parseApiResponse(response, 'Failed to create account')

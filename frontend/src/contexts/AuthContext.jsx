@@ -46,9 +46,9 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const signup = useCallback(async (email, password, name) => {
+  const signup = useCallback(async (username, email, password) => {
     try {
-      const { user, accessToken } = await signupUser({ email, password, name })
+      const { user, accessToken } = await signupUser({ username, email, password })
       setAuthState({ user, accessToken, isAuthenticated: true })
       return { success: true }
     } catch (error) {

@@ -8,18 +8,28 @@ import { generateAccessToken } from '../utils/jwt.js';
  * @access  Public
  */
 export const signup = async (req, res) => {
-  const { email, password, name } = req.body;
+  const { username, email, password } = req.body;
 
   // Validation
-  if (!email || !password) {
+  if (!username || !email || !password) {
     return res.status(400).json({ 
       success: false,
-      message: 'Email and password are required' 
+      message: 'Username, email and password are required' 
     });
   }
 
-  // Normalize email to lowercase for consistency (matches User model schema)
+  // Normalize username and email to lowercase for consistency (matches User model schema)
+  const normalizedUsername = username.toLowerCase().trim();
   const normalizedEmail = email.toLowerCase().trim();
+
+  // Validate username format (alphanumeric and underscores, 3-30 chars)
+  const usernameRegex = /^[a-z0-9_]{3,30}$/;
+  if (!usernameRegex.test(normalizedUsername)) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Username must be 3-30 characters and contain only lowercase letters, numbers, and underscores' 
+    });
+  }
 
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,10 +49,21 @@ export const signup = async (req, res) => {
   }
 
   try {
-    // Check if user already exists (use normalized email)
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    // Check if user already exists (by username or email)
+    const existingUser = await User.findOne({ 
+      $or: [
+        { username: normalizedUsername },
+        { email: normalizedEmail }
+      ]
+    });
 
     if (existingUser) {
+      if (existingUser.username === normalizedUsername) {
+        return res.status(409).json({ 
+          success: false,
+          message: 'Username already taken' 
+        });
+      }
       return res.status(409).json({ 
         success: false,
         message: 'User with this email already exists' 
@@ -53,10 +74,10 @@ export const signup = async (req, res) => {
     const hashedPassword = await hashPassword(password);
 
     // Create user (MongoDB will auto-generate _id)
-    // Use normalized email to match what's stored in database
+    // Use normalized username and email to match what's stored in database
     const newUser = new User({
+      username: normalizedUsername,
       email: normalizedEmail,
-      name: name || undefined,
       password: hashedPassword,
     });
 
@@ -73,8 +94,8 @@ export const signup = async (req, res) => {
       data: {
         user: {
           id: createdUser._id.toString(),
+          username: createdUser.username,
           email: createdUser.email,
-          name: createdUser.name,
           createdAt: createdUser.createdAt,
         },
         accessToken,
@@ -139,8 +160,8 @@ export const login = async (req, res) => {
       data: {
         user: {
           id: user._id.toString(),
+          username: user.username,
           email: user.email,
-          name: user.name,
           createdAt: user.createdAt,
         },
         accessToken,
