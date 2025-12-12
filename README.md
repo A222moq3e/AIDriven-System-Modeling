@@ -2,7 +2,7 @@
 
 An intelligent web application that generates Mermaid diagrams from natural language prompts using AI. Users can describe a diagram in plain text, and the system automatically converts it into visual Mermaid syntax and renders it as a diagram.
 
-## ERD 
+## ERD
 https://app.eraser.io/workspace/f3MkRV0Oo0kyLIl552qa?origin=share
 
 ## Project Overview
@@ -12,13 +12,13 @@ This project provides a seamless interface for creating various types of diagram
 ### Key Features
 
 - **AI-Powered Generation**: Converts natural language prompts into Mermaid diagram syntax using OpenAI GPT-4
-- **Automatic Retry Logic**: Validates generated syntax and automatically retries up to 5 times if invalid
-- **User Authentication**: Secure signup, login, and logout with JWT tokens
-- **Diagram Persistence**: Save and retrieve user-generated diagrams
+- **Automatic Retry Logic**: Frontend validates Mermaid syntax and retries up to 5 times if invalid
+- **User Authentication**: Secure signup, login, and logout with JWT access tokens (90-day expiry)
+- **Diagram Persistence**: Save and retrieve user-generated diagrams tied to accounts
 - **Multiple Diagram Types**: Supports flowcharts, sequence diagrams, class diagrams, ER diagrams, Gantt charts, and more
 - **Modern UI**: Clean, minimal interface with full-screen diagram display
-- **Mock Data Support**: Frontend works independently with mock data when backend is unavailable
-- **Real-time Rendering**: Instant diagram rendering using Mermaid.js with syntax validation
+- **Mock Data Support**: Frontend works independently with mock data when backend is unavailable or `VITE_USE_MOCK=true`
+- **Real-time Rendering**: Instant diagram rendering using Mermaid.js with client-side syntax validation
 - **Responsive Design**: Works seamlessly across different screen sizes
 - **Request Logging**: Comprehensive backend logging for debugging and monitoring
 
@@ -28,7 +28,7 @@ The application follows a client-server architecture:
 
 1. **Frontend**: React application that handles user interactions, diagram rendering, and syntax validation
 2. **Backend**: Express.js API server that processes prompts, communicates with OpenAI, and manages user data
-3. **Database**: MongoDB for storing user accounts and diagrams
+3. **Database**: MongoDB for storing user accounts and diagrams (via Mongoose)
 4. **AI Integration**: OpenAI API generates Mermaid syntax from user prompts
 
 ### Flow
@@ -49,18 +49,16 @@ Frontend Validation → (Retry if invalid) → Rendered Diagram
 - **Radix UI** - Accessible component primitives
 - **Mermaid.js** - Diagram rendering and syntax validation library
 - **React Router** - Client-side routing
-- **class-variance-authority** - Component variant management
-- **clsx & tailwind-merge** - Utility functions for conditional styling
+- **class-variance-authority**, **clsx**, **tailwind-merge** - Styling utilities
 
 ### Backend
 
-- **Express.js 5** - Fast, unopinionated web framework for Node.js
-- **MongoDB** - NoSQL database for data storage
-- **Mongoose** - MongoDB object modeling for Node.js
-- **OpenAI API** - AI service for generating Mermaid syntax from prompts
-- **JWT** - JSON Web Tokens for authentication
+- **Express.js 5** - API framework
+- **MongoDB + Mongoose** - Data layer
+- **OpenAI API** - Mermaid generation
+- **JWT** - Authentication
 - **bcryptjs** - Password hashing
-- **CORS** - Cross-origin resource sharing
+- **CORS** - Cross-origin support
 
 ## Project Structure
 
@@ -105,45 +103,34 @@ npm install
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173`
+The frontend will be available at `http://localhost:5173`.
 
 ### Backend Setup
 
 ```bash
 cd backend
 npm install
-# Copy .env.example to .env and configure
+# create .env with the values below
 npm run dev
 ```
 
-The backend API will be available at `http://localhost:5000`
+The backend API will be available at `http://localhost:5000`.
 
 ### Environment Variables
 
-**Frontend** (`.env`):
+**Frontend** (`frontend/.env`):
 ```env
 VITE_API_URL=http://localhost:5000
 VITE_USE_MOCK=false
 ```
 
-**Backend** (`.env`):
+**Backend** (`backend/.env`):
 ```env
-# OpenAI API Configuration
 OPENAI_API_KEY=your_openai_api_key_here
-
-# Database Configuration
-# Local MongoDB: mongodb://localhost:27017/your_database_name
-# MongoDB Atlas: mongodb+srv://username:password@cluster.mongodb.net/your_database_name
 DATABASE_URL=mongodb://localhost:27017/your_database_name
-
-# Server Configuration
 PORT=5000
-
-# JWT Secret
 ACCESS_TOKEN_SECRET=your-access-token-secret-change-in-production
 ```
-
-You can copy `backend/.env.example` to `backend/.env` and fill in your values.
 
 ## Development
 
@@ -176,28 +163,18 @@ The backend includes comprehensive request logging middleware that logs:
 
 ## API Endpoints
 
-### Authentication
+### Authentication (JWT)
 
-- `POST /api/users/signup` - Create a new user account
-  - Request body: `{ "email": "string", "password": "string", "name": "string" }`
-  - Response: `{ "success": true, "data": { "user": {...}, "accessToken": "string" } }`
+- `POST /api/users/signup` — Body: `{ "username": "string", "email": "string", "password": "string" }` → `{ success, data: { user, accessToken } }`
+- `POST /api/users/login` — Body: `{ "email": "string", "password": "string" }` → `{ success, data: { user, accessToken } }`
+- `POST /api/users/logout` — Header: `Authorization: Bearer <token>` → `{ success, message }`
 
-- `POST /api/users/login` - Login user
-  - Request body: `{ "email": "string", "password": "string" }`
-  - Response: `{ "success": true, "data": { "user": {...}, "accessToken": "string" } }`
+### Diagrams (all protected)
 
-- `POST /api/users/logout` - Logout user (requires authentication)
-  - Headers: `Authorization: Bearer <token>`
-  - Response: `{ "success": true, "message": "Logged out successfully" }`
-
-### Diagrams
-
-- `POST /api/diagrams/generate` - Generate Mermaid syntax from text prompt
-  - Request body: `{ "prompt": "string", "type": "string" (optional), "userId": "string" (optional) }`
-  - Response: `{ "success": true, "data": { "mermaid": "string", "type": "string", "diagramId": "string" } }`
-
-- `GET /api/diagrams/:userId` - Get all diagrams for a user
-  - Response: `{ "success": true, "data": [...] }`
+- `POST /api/diagrams/generate` — Body: `{ "prompt": "string", "type": "string" (optional) }` → `{ success, data: { mermaid, type, diagramId: null } }`
+  - Generation requires auth; the frontend saves to history via the separate save endpoint after validating Mermaid syntax.
+- `POST /api/diagrams` — Body: `{ "prompt": "string", "mermaidCode": "string", "type": "string" }` → `{ success, data: { id, ... } }`
+- `GET /api/diagrams/:userId` — Returns all diagrams for a user `{ success, data: [...] }`
 
 ### Health Check
 
@@ -208,16 +185,7 @@ The backend includes comprehensive request logging middleware that logs:
 
 ### Automatic Retry Logic
 
-The frontend automatically validates all generated Mermaid syntax using Mermaid's built-in renderer. If the syntax is invalid, the system automatically retries the same prompt up to 5 times:
-
-1. User submits prompt
-2. Backend generates Mermaid code via OpenAI
-3. Frontend validates syntax by attempting to render
-4. If invalid → automatically retry (up to 5 attempts)
-5. If valid → display diagram
-6. If all retries fail → show error message
-
-Users are notified when retries were needed with a success message.
+The frontend validates all generated Mermaid syntax using Mermaid’s renderer. If syntax is invalid, it retries up to 5 times before surfacing an error, and it shows when retries were needed.
 
 ### User Authentication
 
