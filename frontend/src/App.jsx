@@ -5,6 +5,7 @@ import { Navbar } from './components/Navbar'
 import { PromptPage } from './components/PromptPage'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
+import { HistoryPage } from './pages/HistoryPage'
 import './index.css'
 
 function App() {
@@ -21,6 +22,17 @@ function App() {
                 <div className="w-screen h-screen overflow-hidden bg-background">
                   <Navbar />
                   <PromptPage />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <div className="w-screen min-h-screen bg-background">
+                  <Navbar />
+                  <HistoryPage />
                 </div>
               </ProtectedRoute>
             }

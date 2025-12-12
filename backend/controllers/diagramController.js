@@ -124,10 +124,17 @@ export const saveDiagram = async (req, res) => {
   // userId is taken from the authenticated user to prevent spoofing
   const userId = req.user?.userId;
 
-  if (!userId || !prompt || !mermaidCode) {
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized',
+    });
+  }
+
+  if (!prompt || !mermaidCode) {
     return res.status(400).json({
       success: false,
-      message: 'userId, prompt, and mermaidCode are required',
+      message: 'prompt and mermaidCode are required',
     });
   }
 
@@ -144,7 +151,8 @@ export const saveDiagram = async (req, res) => {
     res.status(201).json({
       success: true,
       data: {
-        id: savedDiagram._id.toString(),
+        id: savedDiagram._id.toString(), // backward compatibility
+        diagramId: savedDiagram._id.toString(),
         userId: savedDiagram.userId,
         prompt: savedDiagram.prompt,
         mermaidCode: savedDiagram.mermaidCode,

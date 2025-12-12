@@ -194,6 +194,26 @@ export async function saveDiagram({ userId, prompt, mermaid, type, accessToken }
   }
 }
 
+/**
+ * Fetch all diagrams for a user
+ * @param {string} userId
+ * @param {string} accessToken
+ * @returns {Promise<Array>}
+ */
+export async function fetchDiagrams(userId, accessToken) {
+  if (!userId) {
+    throw new Error('userId is required to fetch history')
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/diagrams/${userId}`, {
+    method: 'GET',
+    headers: buildAuthHeaders(accessToken),
+  })
+
+  const data = await parseApiResponse(response, 'Failed to fetch diagrams')
+  return data.data ?? data ?? []
+}
+
 export async function loginUser({ email, password }) {
   const response = await fetch(`${API_BASE_URL}/api/users/login`, {
     method: 'POST',
