@@ -12,7 +12,8 @@ const openai = new OpenAI({
 // @route   POST /api/diagrams/generate
 // @access  Public (or Protected if we add middleware later)
 export const generateDiagram = async (req, res) => {
-  const { prompt, type, userId, save = false } = req.body;
+  const { prompt, type, save = false } = req.body;
+  const authUserId = req.user?.userId;
 
   if (!prompt) {
     return res.status(400).json({ 
@@ -43,9 +44,10 @@ export const generateDiagram = async (req, res) => {
 
     let savedDiagram = null;
     // Only save when explicitly requested (save === true) to avoid duplicates during retries
-    if (save && userId) {
+    // Route is authenticated; use authenticated user id
+    if (save) {
       const newDiagram = new Diagram({
-        userId,
+        userId: authUserId,
         prompt,
         mermaidCode: cleanCode,
         type: type || 'flowchart',
@@ -117,7 +119,10 @@ export const getDiagrams = async (req, res) => {
 // @route   POST /api/diagrams
 // @access  Private (requires authentication)
 export const saveDiagram = async (req, res) => {
-  const { userId, prompt, mermaidCode, type } = req.body;
+  const { prompt, mermaidCode, type } = req.body;
+
+  // userId is taken from the authenticated user to prevent spoofing
+  const userId = req.user?.userId;
 
   if (!userId || !prompt || !mermaidCode) {
     return res.status(400).json({
