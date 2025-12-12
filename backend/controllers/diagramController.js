@@ -10,7 +10,7 @@ const openai = new OpenAI({
 
 // @desc    Generate Mermaid code from prompt and Auto-Save
 // @route   POST /api/diagrams/generate
-// @access  Public (or Protected if we add middleware later)
+// @access  Private (protected by auth middleware)
 export const generateDiagram = async (req, res) => {
   const { prompt, type, save = false } = req.body;
   const authUserId = req.user?.userId;
@@ -73,7 +73,7 @@ export const generateDiagram = async (req, res) => {
   }
 };
 
-// @desc    Get user diagrams
+// @desc    Get authenticated user's diagrams
 // @route   GET /api/diagrams/:userId
 // @access  Public
 export const getDiagrams = async (req, res) => {
