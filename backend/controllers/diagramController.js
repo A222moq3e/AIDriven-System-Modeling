@@ -23,6 +23,10 @@ export const generateDiagram = async (req, res) => {
   }
 
   try {
+    // Construct the prompt with the diagram type
+    const diagramType = type || 'flowchart';
+    const fullPrompt = `Create for me a ${diagramType}, ${prompt}`;
+    
     const aiResponse = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -32,7 +36,7 @@ export const generateDiagram = async (req, res) => {
         },
         {
           role: "user",
-          content: `Create a ${type || 'flowchart'} mermaid diagram for: ${prompt}`
+          content: fullPrompt
         }
       ],
       max_tokens: 500,
