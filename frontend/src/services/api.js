@@ -296,3 +296,48 @@ export const authStorage = {
   },
 }
 
+/**
+ * Update user profile (username and email)
+ * @param {Object} params
+ * @param {string} params.username
+ * @param {string} params.email
+ * @param {string} params.accessToken
+ * @returns {Promise<{user: Object}>}
+ */
+export async function updateUserProfile({ username, email, accessToken }) {
+  const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
+    method: 'PUT',
+    headers: buildAuthHeaders(accessToken),
+    body: JSON.stringify({ username, email }),
+  })
+
+  const data = await parseApiResponse(response, 'Failed to update profile')
+  const payload = data.data ?? data
+
+  return {
+    user: payload.user,
+  }
+}
+
+/**
+ * Change user password
+ * @param {Object} params
+ * @param {string} params.currentPassword
+ * @param {string} params.newPassword
+ * @param {string} params.accessToken
+ * @returns {Promise<{message: string}>}
+ */
+export async function changeUserPassword({ currentPassword, newPassword, accessToken }) {
+  const response = await fetch(`${API_BASE_URL}/api/users/password`, {
+    method: 'PUT',
+    headers: buildAuthHeaders(accessToken),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+
+  const data = await parseApiResponse(response, 'Failed to change password')
+
+  return {
+    message: data.message || 'Password changed successfully',
+  }
+}
+

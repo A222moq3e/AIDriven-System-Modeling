@@ -195,3 +195,169 @@ export const logout = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Update user profile (username and email)
+ * @route   PUT /api/users/profile
+ * @access  Private (requires authentication)
+ */
+export const updateProfile = async (req, res) => {
+  const { username, email } = req.body;
+  const userId = req.user?.userId;
+
+  // Validation
+  if (!username || !email) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Username and email are required' 
+    });
+  }
+
+  // Normalize username and email to lowercase for consistency
+  const normalizedUsername = username.toLowerCase().trim();
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // Validate username format (alphanumeric and underscores, 3-30 chars)
+  const usernameRegex = /^[a-z0-9_]{3,30}$/;
+  if (!usernameRegex.test(normalizedUsername)) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Username must be 3-30 characters and contain only lowercase letters, numbers, and underscores' 
+    });
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!normalizedEmail.match(emailRegex)) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Invalid email format' 
+    });
+  }
+
+  try {
+    // Check if username or email is already taken by another user
+    const existingUser = await User.findOne({ 
+      $or: [
+        { username: normalizedUsername },
+        { email: normalizedEmail }
+      ],
+      _id: { $ne: userId } // Exclude current user
+    });
+
+    if (existingUser) {
+      if (existingUser.username === normalizedUsername) {
+        return res.status(409).json({ 
+          success: false,
+          message: 'Username already taken' 
+        });
+      }
+      return res.status(409).json({ 
+        success: false,
+        message: 'Email already in use' 
+      });
+    }
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { 
+        username: normalizedUsername,
+        email: normalizedEmail,
+        updatedAt: Date.now()
+      },
+      { new: true } // Return updated document
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: {
+          id: updatedUser._id.toString(),
+          username: updatedUser.username,
+          email: updatedUser.email,
+          createdAt: updatedUser.createdAt,
+        }
+      },
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during profile update' 
+    });
+  }
+};
+
+/**
+ * @desc    Change user password
+ * @route   PUT /api/users/password
+ * @access  Private (requires authentication)
+ */
+export const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user?.userId;
+
+  // Validation
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Current password and new password are required' 
+    });
+  }
+
+  // Validate new password length
+  if (newPassword.length < 6) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'New password must be at least 6 characters long' 
+    });
+  }
+
+  try {
+    // Find user
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    // Verify current password
+    const isPasswordValid = await comparePassword(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Current password is incorrect' 
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password
+    user.password = hashedPassword;
+    user.updatedAt = Date.now();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully',
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during password change' 
+    });
+  }
+};
