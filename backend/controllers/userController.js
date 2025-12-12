@@ -18,9 +18,12 @@ export const signup = async (req, res) => {
     });
   }
 
+  // Normalize email to lowercase for consistency (matches User model schema)
+  const normalizedEmail = email.toLowerCase().trim();
+
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!emailRegex.test(normalizedEmail)) {
     return res.status(400).json({ 
       success: false,
       message: 'Invalid email format' 
@@ -36,8 +39,8 @@ export const signup = async (req, res) => {
   }
 
   try {
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists (use normalized email)
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
       return res.status(409).json({ 
@@ -50,8 +53,9 @@ export const signup = async (req, res) => {
     const hashedPassword = await hashPassword(password);
 
     // Create user (MongoDB will auto-generate _id)
+    // Use normalized email to match what's stored in database
     const newUser = new User({
-      email,
+      email: normalizedEmail,
       name: name || undefined,
       password: hashedPassword,
     });
@@ -101,9 +105,12 @@ export const login = async (req, res) => {
     });
   }
 
+  // Normalize email to lowercase for consistency (matches User model schema)
+  const normalizedEmail = email.toLowerCase().trim();
+
   try {
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Find user by email (use normalized email to match database)
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(401).json({ 

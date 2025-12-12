@@ -12,10 +12,22 @@ const connectDB = async () => {
       if (mongoose.connection.readyState === 1) {
         resolve();
       } else {
-        mongoose.connection.once('connected', resolve);
-        mongoose.connection.once('error', reject);
-        // Timeout after 10 seconds
-        setTimeout(() => reject(new Error('Connection timeout')), 10000);
+        // Set up timeout and store the timeout ID
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Connection timeout'));
+        }, 10000);
+        
+        // Clear timeout and resolve when connected
+        mongoose.connection.once('connected', () => {
+          clearTimeout(timeoutId);
+          resolve();
+        });
+        
+        // Clear timeout and reject on error
+        mongoose.connection.once('error', (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        });
       }
     });
   } catch (error) {
