@@ -23,6 +23,10 @@ export const generateDiagram = async (req, res) => {
   }
 
   try {
+    // Construct the prompt with the diagram type
+    const diagramType = type || 'flowchart';
+    const fullPrompt = `Create for me a ${diagramType}, ${prompt}`;
+    
     const aiResponse = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -32,7 +36,7 @@ export const generateDiagram = async (req, res) => {
         },
         {
           role: "user",
-          content: `Create a ${type || 'flowchart'} mermaid diagram for: ${prompt}`
+          content: fullPrompt
         }
       ],
       max_tokens: 500,
@@ -124,10 +128,17 @@ export const saveDiagram = async (req, res) => {
   // userId is taken from the authenticated user to prevent spoofing
   const userId = req.user?.userId;
 
-  if (!userId || !prompt || !mermaidCode) {
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized',
+    });
+  }
+
+  if (!prompt || !mermaidCode) {
     return res.status(400).json({
       success: false,
-      message: 'userId, prompt, and mermaidCode are required',
+      message: 'prompt and mermaidCode are required',
     });
   }
 
@@ -144,7 +155,8 @@ export const saveDiagram = async (req, res) => {
     res.status(201).json({
       success: true,
       data: {
-        id: savedDiagram._id.toString(),
+        id: savedDiagram._id.toString(), // backward compatibility
+        diagramId: savedDiagram._id.toString(),
         userId: savedDiagram.userId,
         prompt: savedDiagram.prompt,
         mermaidCode: savedDiagram.mermaidCode,
