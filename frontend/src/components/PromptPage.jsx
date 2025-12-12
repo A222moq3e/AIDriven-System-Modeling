@@ -2,8 +2,9 @@ import { useState, useCallback } from 'react'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
 import { MermaidDiagram } from './MermaidDiagram'
-import { generateMermaid } from '../services/api'
+import { generateMermaid, saveDiagram } from '../services/api'
 import { cn } from '../lib/utils'
+import { useAuth } from '../contexts/AuthContext'
 
 /**
  * Main prompt page component
@@ -14,6 +15,8 @@ export function PromptPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isMock, setIsMock] = useState(false)
+  const [retryInfo, setRetryInfo] = useState(null)
+  const { user, accessToken } = useAuth()
 
   const handleSubmit = useCallback(async (e) => {
     e?.preventDefault()
@@ -25,18 +28,42 @@ export function PromptPage() {
     setIsLoading(true)
     setError(null)
     setMermaidCode('')
+    setRetryInfo(null)
 
     try {
-      const result = await generateMermaid(prompt.trim())
+      const result = await generateMermaid(prompt.trim(), {
+        accessToken,
+      })
       setMermaidCode(result.mermaid)
       setIsMock(result.isMock || false)
+
+      // Save the validated diagram only once (after successful validation)
+      if (user?.id) {
+        try {
+          await saveDiagram({
+            userId: user.id,
+            prompt: prompt.trim(),
+            mermaid: result.mermaid,
+            type: result.type,
+            accessToken,
+          })
+        } catch (saveError) {
+          console.warn('Failed to save diagram:', saveError.message)
+        }
+      }
+
+      if (result.retries > 0) {
+        setRetryInfo(`Generated successfully after ${result.retries} retr${result.retries === 1 ? 'y' : 'ies'}`)
+        // Clear retry info after 3 seconds
+        setTimeout(() => setRetryInfo(null), 3000)
+      }
     } catch (err) {
       console.error('Error generating Mermaid:', err)
       setError(err.message || 'Failed to generate diagram. Please try again.')
     } finally {
       setIsLoading(false)
     }
-  }, [prompt])
+  }, [prompt, user?.id, accessToken])
 
   const handleCopyMermaid = useCallback(async () => {
     if (!mermaidCode) return
@@ -98,6 +125,11 @@ export function PromptPage() {
             )}
           </Button>
         </form>
+        {retryInfo && (
+          <Alert className="mt-2 bg-blue-50 border-blue-200">
+            <AlertDescription className="text-xs text-blue-800">{retryInfo}</AlertDescription>
+          </Alert>
+        )}
         {error && (
           <Alert variant="destructive" className="mt-2">
             <AlertDescription className="text-xs">{error}</AlertDescription>

@@ -1,4 +1,4 @@
-# AI Mermaid Diagram Generator - Frontend
+# AI System Modeling Generator - Frontend
 
 A React application that generates Mermaid diagrams from text prompts using AI. The frontend sends prompts to a backend API (which calls OpenAI) and displays the rendered diagrams.
 

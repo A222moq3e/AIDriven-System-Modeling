@@ -9,8 +9,8 @@ export function Navbar() {
   const navigate = useNavigate()
   const { isAuthenticated, logout } = useAuth()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login')
   }
 
@@ -18,7 +18,7 @@ export function Navbar() {
     <nav className="absolute top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b">
       <div className="container mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold">AI Mermaid Generator</h1>
+          <h1 className="text-lg font-semibold">AI System Modeling Generator</h1>
         </div>
         <div className="flex items-center gap-2">
           {isAuthenticated ? (

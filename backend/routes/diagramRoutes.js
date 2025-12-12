@@ -1,11 +1,16 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   generateDiagram,
   getDiagrams,
-} = require('../controllers/diagramController');
+  saveDiagram,
+} from '../controllers/diagramController.js';
+import { authenticate } from '../middleware/auth.js';
 
-router.post('/generate', generateDiagram);
-router.get('/:userId', getDiagrams);
+const router = express.Router();
 
-module.exports = router;
+// All diagram routes require authentication
+router.post('/generate', authenticate, generateDiagram);
+router.get('/:userId', authenticate, getDiagrams);
+router.post('/', authenticate, saveDiagram);
+
+export default router;

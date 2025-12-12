@@ -1,6 +1,6 @@
-const OpenAI = require('openai');
-const Diagram = require('../models/Diagram');
-const dotenv = require('dotenv');
+import OpenAI from 'openai';
+import Diagram from '../models/Diagram.js';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -10,12 +10,16 @@ const openai = new OpenAI({
 
 // @desc    Generate Mermaid code from prompt and Auto-Save
 // @route   POST /api/diagrams/generate
-// @access  Public (or Protected if we add middleware later)
-const generateDiagram = async (req, res) => {
-  const { prompt, type, userId } = req.body;
+// @access  Private (protected by auth middleware)
+export const generateDiagram = async (req, res) => {
+  const { prompt, type, save = false } = req.body;
+  const authUserId = req.user?.userId;
 
   if (!prompt) {
-    return res.status(400).json({ message: 'Prompt is required' });
+    return res.status(400).json({ 
+      success: false,
+      message: 'Prompt is required' 
+    });
   }
 
   try {
@@ -39,13 +43,17 @@ const generateDiagram = async (req, res) => {
     const cleanCode = mermaidCode.replace(/^```mermaid\n?/, '').replace(/```$/, '');
 
     let savedDiagram = null;
-    if (userId) {
-      savedDiagram = await Diagram.create({
-        userId,
+    // Only save when explicitly requested (save === true) to avoid duplicates during retries
+    // Route is authenticated; use authenticated user id
+    if (save) {
+      const newDiagram = new Diagram({
+        userId: authUserId,
         prompt,
         mermaidCode: cleanCode,
         type: type || 'flowchart',
       });
+      
+      savedDiagram = await newDiagram.save();
     }
 
     res.status(200).json({
@@ -53,57 +61,103 @@ const generateDiagram = async (req, res) => {
       data: {
         mermaid: cleanCode,
         type: type || 'flowchart',
-        diagramId: savedDiagram ? savedDiagram._id : null,
+        diagramId: savedDiagram ? savedDiagram._id.toString() : null,
       },
     });
   } catch (error) {
     console.error("OpenAI Error:", error);
-    res.status(500).json({ message: 'Failed to generate diagram' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to generate diagram' 
+    });
   }
 };
 
-// @desc    Get user diagrams
+// @desc    Get authenticated user's diagrams
 // @route   GET /api/diagrams/:userId
 // @access  Public
-const getDiagrams = async (req, res) => {
+export const getDiagrams = async (req, res) => {
   const { userId } = req.params;
 
+  if (!userId) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'User ID is required' 
+    });
+  }
+
   try {
-    const diagrams = await Diagram.find({ userId }).sort({ createdAt: -1 });
+    const userDiagrams = await Diagram.find({ userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Convert _id to id for consistency
+    const formattedDiagrams = userDiagrams.map(diagram => ({
+      id: diagram._id.toString(),
+      userId: diagram.userId,
+      prompt: diagram.prompt,
+      mermaidCode: diagram.mermaidCode,
+      type: diagram.type,
+      createdAt: diagram.createdAt,
+      updatedAt: diagram.updatedAt,
+    }));
 
     res.status(200).json({
       success: true,
-      data: diagrams,
+      data: formattedDiagrams,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to fetch diagrams' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch diagrams' 
+    });
   }
 };
 
-module.exports = {
-  generateDiagram,
-  getDiagrams,
+// @desc    Persist a validated diagram
+// @route   POST /api/diagrams
+// @access  Private (requires authentication)
+export const saveDiagram = async (req, res) => {
+  const { prompt, mermaidCode, type } = req.body;
+
+  // userId is taken from the authenticated user to prevent spoofing
+  const userId = req.user?.userId;
+
+  if (!userId || !prompt || !mermaidCode) {
+    return res.status(400).json({
+      success: false,
+      message: 'userId, prompt, and mermaidCode are required',
+    });
+  }
+
+  try {
+    const newDiagram = new Diagram({
+      userId,
+      prompt,
+      mermaidCode,
+      type: type || 'flowchart',
+    });
+
+    const savedDiagram = await newDiagram.save();
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: savedDiagram._id.toString(),
+        userId: savedDiagram.userId,
+        prompt: savedDiagram.prompt,
+        mermaidCode: savedDiagram.mermaidCode,
+        type: savedDiagram.type,
+        createdAt: savedDiagram.createdAt,
+        updatedAt: savedDiagram.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Save diagram error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save diagram',
+    });
+  }
 };
-/*
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-const response = await openai.responses.create({
-  prompt: {
-    "id": "pmpt_6925efc645008196aef1bed0c7ea4c4b0e39ebb9f904648c",
-    "version": "2"
-  },
-  input: [],
-  reasoning: {},
-  store: true,
-  include: [
-    "reasoning.encrypted_content",
-    "web_search_call.action.sources"
-  ]
-});
-
-*/

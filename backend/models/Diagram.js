@@ -1,9 +1,8 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const diagramSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true,
   },
   prompt: {
@@ -16,12 +15,21 @@ const diagramSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    default: null,
+    default: 'flowchart',
   },
   createdAt: {
     type: Date,
     default: Date.now,
   },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-module.exports = mongoose.model('Diagram', diagramSchema);
+// Update the updatedAt field before saving
+diagramSchema.pre('save', function() {
+  this.updatedAt = Date.now();
+});
+
+export default mongoose.model('Diagram', diagramSchema);
