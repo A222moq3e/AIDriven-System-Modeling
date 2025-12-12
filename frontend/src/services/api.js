@@ -75,7 +75,7 @@ const parseApiResponse = async (response, fallbackMessage) => {
  * Falls back to mock data if backend is unavailable or USE_MOCK is true
  * 
  * @param {string} prompt - User's text prompt
- * @returns {Promise<{mermaid: string, isMock: boolean, error?: string, retries?: number}>}
+ * @returns {Promise<{mermaid: string, isMock: boolean, error?: string, retries?: number, diagramId?: string | null}>}
  */
 export async function generateMermaid(prompt, { type, userId, accessToken } = {}) {
   // If mock mode is explicitly enabled, use mock data
@@ -90,9 +90,10 @@ export async function generateMermaid(prompt, { type, userId, accessToken } = {}
   // Retry loop - up to MAX_RETRIES attempts
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
+      // For retries/validation we do NOT save on the backend to avoid duplicates.
+      // Saving is done after validation via saveDiagram().
       const payload = { prompt }
       if (type) payload.type = type
-      if (userId) payload.userId = userId
 
       console.log(`Attempt ${attempt}/${MAX_RETRIES}: Generating Mermaid diagram...`)
 
@@ -116,13 +117,14 @@ export async function generateMermaid(prompt, { type, userId, accessToken } = {}
       
       if (isValid) {
         console.log(`✓ Valid Mermaid syntax received on attempt ${attempt}`)
-        return {
+        const result = {
           mermaid: mermaidCode,
-          diagramId: data.data?.diagramId ?? data.diagramId ?? null,
+          diagramId: null, // Saved later after validation
           type: data.data?.type || data.type || type,
           isMock: false,
           retries: attempt - 1,
         }
+        return result
       } else {
         console.warn(`✗ Invalid Mermaid syntax on attempt ${attempt}, retrying...`)
         retryCount = attempt
@@ -160,6 +162,36 @@ export async function generateMermaid(prompt, { type, userId, accessToken } = {}
   throw new Error(
     `Failed to generate valid Mermaid syntax after ${MAX_RETRIES} attempts. ${lastError?.message || 'Unknown error'}`
   )
+}
+
+/**
+ * Persist a validated diagram to the backend
+ * @param {Object} params
+ * @param {string} params.userId
+ * @param {string} params.prompt
+ * @param {string} params.mermaid
+ * @param {string} [params.type]
+ * @param {string} [params.accessToken]
+ * @returns {Promise<{diagramId: string | null}>}
+ */
+export async function saveDiagram({ userId, prompt, mermaid, type, accessToken }) {
+  const response = await fetch(`${API_BASE_URL}/api/diagrams`, {
+    method: 'POST',
+    headers: buildAuthHeaders(accessToken),
+    body: JSON.stringify({
+      userId,
+      prompt,
+      mermaidCode: mermaid,
+      type,
+    }),
+  })
+
+  const data = await parseApiResponse(response, 'Failed to save diagram')
+  const payload = data.data ?? data
+
+  return {
+    diagramId: payload.id ?? payload.diagramId ?? null,
+  }
 }
 
 export async function loginUser({ email, password }) {

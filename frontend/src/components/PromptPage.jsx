@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
 import { MermaidDiagram } from './MermaidDiagram'
-import { generateMermaid } from '../services/api'
+import { generateMermaid, saveDiagram } from '../services/api'
 import { cn } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -32,11 +32,26 @@ export function PromptPage() {
 
     try {
       const result = await generateMermaid(prompt.trim(), {
-        userId: user?.id,
         accessToken,
       })
       setMermaidCode(result.mermaid)
       setIsMock(result.isMock || false)
+
+      // Save the validated diagram only once (after successful validation)
+      if (user?.id) {
+        try {
+          await saveDiagram({
+            userId: user.id,
+            prompt: prompt.trim(),
+            mermaid: result.mermaid,
+            type: result.type,
+            accessToken,
+          })
+        } catch (saveError) {
+          console.warn('Failed to save diagram:', saveError.message)
+        }
+      }
+
       if (result.retries > 0) {
         setRetryInfo(`Generated successfully after ${result.retries} retr${result.retries === 1 ? 'y' : 'ies'}`)
         // Clear retry info after 3 seconds
