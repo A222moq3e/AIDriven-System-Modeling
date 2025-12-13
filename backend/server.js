@@ -26,12 +26,12 @@ app.use('/api/users', userRoutes);
 app.use('/api/diagrams', diagramRoutes);
 
 // Health check for frontend probes
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
 // Basic route for testing
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.send('API is running...');
 });
 
