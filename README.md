@@ -20,6 +20,8 @@ This project provides a seamless interface for creating various types of diagram
 - **Profile Management**: Update username, email, and change password
 - **7 Supported Diagram Types**: Flowchart, Sequence Diagram, Class Diagram, State Diagram, ERD, User Journey, Gantt Chart
 - **Modern UI**: Clean, minimal interface with full-screen diagram display and zoom controls
+- **PNG Export**: Export diagrams as PNG images with one click
+- **Placeholder Diagram**: Shows a helpful "Text → Diagram" example when the board is empty
 - **Mock Data Support**: Frontend works independently with mock data when backend is unavailable or `VITE_USE_MOCK=true`
 - **Real-time Rendering**: Instant diagram rendering using Mermaid.js with client-side syntax validation
 - **Responsive Design**: Works seamlessly across different screen sizes
@@ -47,7 +49,7 @@ Rendered Diagram with Zoom Controls
 1. User selects diagram type from dropdown (e.g., "Sequence Diagram")
 2. User enters prompt (e.g., "user login process")
 3. Frontend sends: `{ type: "sequence diagram", prompt: "user login process" }`
-4. Backend constructs: `"Create for me a sequence diagram, user login process"`
+4. Backend constructs: `"Create for me a "sequence diagram" diagram, I want it for: user login process"`
 5. OpenAI GPT-4 generates Mermaid syntax
 6. Frontend validates syntax (up to 5 retry attempts, silent error suppression)
 7. On success: Diagram rendered with zoom controls; saved to user's history
@@ -179,8 +181,8 @@ const response = await openai.responses.create({
 - `OPENAI_PROMPT_VERSION`: Version number (default: `"4"`)
 
 **How It Works:**
-- The system constructs a full prompt: `"Create for me a {diagramType}, {user's prompt}"`
-- Example: `"Create for me a sequence diagram, user authentication flow"`
+- The system constructs a full prompt: `"Create for me a "{diagramType}" diagram, I want it for: {user's prompt}"`
+- Example: `"Create for me a "sequence diagram" diagram, I want it for: user authentication flow"`
 - This full prompt is sent as the `input` parameter to your stored prompt
 - Your stored prompt then interprets the request and generates the Mermaid diagram
 
@@ -226,6 +228,8 @@ The frontend includes mock data support, allowing development to continue even w
 - **Loading states**: Visual feedback during diagram generation
 - **Retry feedback**: Shows notification when retries were needed
 - **Zoom Controls**: Zoom in/out and reset zoom functionality for diagrams
+- **PNG Export**: Export diagrams as high-quality PNG images with white background
+- **Placeholder Diagram**: Displays a helpful "Your Text → Our App → Diagram" flowchart when the board is empty (first-time users)
 
 ### Backend Development
 
@@ -474,7 +478,7 @@ Authorization: Bearer <access_token>
 ```
 
 **Notes:**
-- The backend constructs the full prompt as: `"Create for me a {type}, {prompt}"`
+- The backend constructs the full prompt as: `"Create for me a "{type}" diagram, I want it for: {prompt}"`
 - Frontend validates the returned Mermaid syntax and retries up to 5 times if invalid
 - Diagrams are NOT auto-saved during generation (to avoid duplicates during retries)
 - Use the separate save endpoint after successful validation
@@ -611,7 +615,7 @@ Users can choose from 7 different diagram types via a fixed-width dropdown butto
 - **User Journey Diagram**
 - **Gantt Chart**
 
-The selected type is prepended to the user's prompt when sent to OpenAI: `"Create for me a {type}, {user_prompt}"`
+The selected type is formatted into the user's prompt when sent to OpenAI: `"Create for me a "{type}" diagram, I want it for: {user_prompt}"`
 
 ### Automatic Retry Logic & Error Suppression
 
@@ -710,10 +714,12 @@ The application supports 7 Mermaid diagram types:
 **MermaidDiagram (Diagram Display):**
 - Full viewport diagram rendering
 - Zoom controls (zoom in, zoom out, reset) in top-right corner
+- PNG export button alongside zoom controls
 - Automatic SVG scaling to fit container
 - Responsive layout with overflow handling
 - Skeleton loading states during generation
 - Error suppression for invalid syntax during validation
+- Placeholder diagram ("Your Text → Our App → Diagram") shown when board is empty
 
 **Design Principles:**
 - Minimal, clean interface with focus on diagram content
