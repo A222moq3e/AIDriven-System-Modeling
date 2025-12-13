@@ -4,6 +4,12 @@ import { Skeleton } from './ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from './ui/alert'
 import { Button } from './ui/button'
 
+// Placeholder diagram for empty state
+const PLACEHOLDER_DIAGRAM = `flowchart LR
+    A[Your Text] -->|Our App| B[Diagram]
+    style A fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    style B fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px`
+
 /**
  * MermaidDiagram component for rendering Mermaid syntax as diagrams
  * @param {Object} props
@@ -36,7 +42,10 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
 
   // Render diagram when mermaidCode changes
   useEffect(() => {
-    if (!mermaidCode || isLoading) {
+    // Use placeholder if no code and not loading, otherwise use actual code
+    const codeToRender = (!mermaidCode && !isLoading && !error) ? PLACEHOLDER_DIAGRAM : mermaidCode
+    
+    if (!codeToRender || isLoading) {
       setRenderError(null)
       return
     }
@@ -68,7 +77,7 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
         const id = `mermaid-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
 
         // Validate and render
-        const { svg } = await mermaid.render(id, mermaidCode)
+        const { svg } = await mermaid.render(id, codeToRender)
         
         // Check again before setting innerHTML
         if (!isMounted || !diagramRef.current) {
@@ -124,7 +133,7 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
     return () => {
       isMounted = false
     }
-  }, [mermaidCode, isLoading])
+  }, [mermaidCode, isLoading, error])
 
   // Zoom controls
   const handleZoomIn = () => {
@@ -223,9 +232,10 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
   }
 
   // Determine what to show (moved before useEffects that use it)
-  const showLoading = (isLoading || isRendering) && !mermaidCode
+  const isPlaceholder = !mermaidCode && !isLoading && !error
+  const showLoading = (isLoading || isRendering) && !mermaidCode && !isPlaceholder
   const showError = (error || renderError) && !isLoading && !isRendering
-  const showDiagram = mermaidCode && !isLoading && !isRendering && !error && !renderError
+  const showDiagram = (mermaidCode || isPlaceholder) && !isLoading && !isRendering && !error && !renderError
 
   // Reset zoom when new diagram is loaded
   useEffect(() => {
@@ -260,8 +270,8 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
 
   return (
     <div className="absolute inset-0 pt-14 pb-20 flex items-center justify-center">
-      {/* Zoom Controls */}
-      {showDiagram && (
+      {/* Zoom Controls - Hide for placeholder */}
+      {showDiagram && !isPlaceholder && (
         <div className="absolute top-20 right-4 z-10 flex flex-col gap-2 bg-background/95 backdrop-blur-sm border rounded-md p-1">
           <Button
             variant="ghost"
@@ -332,9 +342,9 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
         </Alert>
       )}
 
-      {/* Always render the ref container when we have mermaidCode or are rendering */}
+      {/* Always render the ref container when we have mermaidCode, placeholder, or are rendering */}
       {/* This ensures the ref is available when the async render completes */}
-      {(mermaidCode || isRendering) && (
+      {(mermaidCode || isPlaceholder || isRendering) && (
         <div
           ref={containerRef}
           className={`mermaid-diagram-container absolute inset-0 flex items-center justify-center ${
