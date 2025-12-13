@@ -25,26 +25,103 @@ export const generateDiagram = async (req, res) => {
   try {
     // Construct the prompt with the diagram type
     const diagramType = type || 'flowchart';
-    const fullPrompt = `Create for me a ${diagramType}, ${prompt}`;
+    const fullPrompt = `Create for me a "${diagramType}" diagram, I want it for: ${prompt}`;
     
-    const aiResponse = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that generates valid Mermaid.js diagram code. Return ONLY the mermaid code, no markdown fencing, no explanation."
+    // Use stored prompt ID if available, otherwise fall back to chat completions
+    const storedPromptId = process.env.OPENAI_PROMPT_ID;
+    const storedPromptVersion = process.env.OPENAI_PROMPT_VERSION || "4";
+    
+    // Log what we're sending to OpenAI
+    console.log('\n=== OpenAI Request ===');
+    console.log('API Type:', storedPromptId ? 'Responses API' : 'Chat Completions API');
+    console.log('Diagram Type:', diagramType);
+    console.log('User Prompt:', prompt);
+    console.log('Full Constructed Prompt:', fullPrompt);
+    
+    let requestPayload;
+    let aiResponse;
+    
+    if (storedPromptId) {
+      // Use stored prompt with responses API
+      // Pass the full constructed prompt directly as input
+      requestPayload = {
+        prompt: {
+          id: storedPromptId,
+          version: storedPromptVersion
         },
-        {
-          role: "user",
-          content: fullPrompt
-        }
-      ],
-      max_tokens: 500,
-    });
+        input: fullPrompt
+      };
+      console.log('Request Payload:', JSON.stringify(requestPayload, null, 2));
+      console.log('===================\n');
+      
+      aiResponse = await openai.responses.create(requestPayload);
+    } else {
+      // Fallback to chat completions with inline prompt
+      requestPayload = {
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: "You are a helpful assistant that generates valid Mermaid.js diagram code. Return ONLY the mermaid code, no markdown fencing, no explanation."
+          },
+          {
+            role: "user",
+            content: fullPrompt
+          }
+        ],
+        max_tokens: 500,
+      };
+      console.log('Request Payload:', JSON.stringify(requestPayload, null, 2));
+      console.log('===================\n');
+      
+      aiResponse = await openai.chat.completions.create(requestPayload);
+    }
 
-    const mermaidCode = aiResponse.choices[0].message.content.trim();
+    // Log the full OpenAI response for debugging
+    console.log('\n=== OpenAI Response ===');
+    console.log('Response Type:', storedPromptId ? 'Responses API' : 'Chat Completions API');
+    console.log('Full Response:', JSON.stringify(aiResponse, null, 2));
+    console.log('Response Keys:', Object.keys(aiResponse || {}));
+    console.log('======================\n');
+    
+    // Extract content based on API type
+    let mermaidCode;
+    if (storedPromptId) {
+      // Response from responses API
+      // The response has output_text field with the actual text
+      if (aiResponse.output_text) {
+        mermaidCode = aiResponse.output_text;
+      } else if (aiResponse.output && Array.isArray(aiResponse.output)) {
+        // Fallback: extract from output array (find message type with text)
+        const messageOutput = aiResponse.output.find(item => 
+          item.type === 'message' && 
+          item.content && 
+          Array.isArray(item.content)
+        );
+        if (messageOutput && messageOutput.content) {
+          const textContent = messageOutput.content.find(c => c.type === 'output_text');
+          if (textContent && textContent.text) {
+            mermaidCode = textContent.text;
+          }
+        }
+      }
+      
+      // Ensure we have a string
+      if (!mermaidCode || typeof mermaidCode !== 'string') {
+        console.warn('Could not extract mermaidCode from Responses API, using fallback');
+        mermaidCode = '';
+      }
+    } else {
+      // Response from chat completions API
+      mermaidCode = aiResponse.choices[0].message.content.trim();
+    }
+    
+    console.log('Extracted mermaidCode type:', typeof mermaidCode);
+    console.log('Extracted mermaidCode length:', mermaidCode?.length || 0);
+    console.log('Extracted mermaidCode preview:', mermaidCode?.substring(0, 100) || 'empty');
+    
     // Clean up if the AI adds markdown backticks by mistake
-    const cleanCode = mermaidCode.replace(/^```mermaid\n?/, '').replace(/```$/, '');
+    const cleanCode = mermaidCode.trim().replace(/^```mermaid\n?/, '').replace(/```$/, '');
 
     let savedDiagram = null;
     // Only save when explicitly requested (save === true) to avoid duplicates during retries

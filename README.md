@@ -142,10 +142,73 @@ VITE_USE_MOCK=false
 **Backend** (`backend/.env`):
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_PROMPT_ID=pmpt_6925efc645008196aef1bed0c7ea4c4b0e39ebb9f904648c
+OPENAI_PROMPT_VERSION=4
 DATABASE_URL=mongodb://localhost:27017/your_database_name
 PORT=5000
 ACCESS_TOKEN_SECRET=your-access-token-secret-change-in-production
 ```
+
+**Note:** 
+- `OPENAI_PROMPT_ID` is optional. If provided, the system will use OpenAI's Responses API with your stored prompt instead of the Chat Completions API.
+- `OPENAI_PROMPT_VERSION` is optional (defaults to "4"). Specifies the version of your stored prompt to use.
+- If `OPENAI_PROMPT_ID` is omitted, the system falls back to the default inline prompt using Chat Completions API.
+
+### OpenAI Configuration Details
+
+**API Key (`OPENAI_API_KEY`):**
+- Required for AI diagram generation
+- Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+
+**Stored Prompt Configuration:**
+
+When using a stored prompt (via `OPENAI_PROMPT_ID`), the system uses OpenAI's **Responses API**:
+
+```javascript
+const response = await openai.responses.create({
+  prompt: {
+    id: "pmpt_6925efc645008196aef1bed0c7ea4c4b0e39ebb9f904648c",
+    version: "4"
+  },
+  input: "Create for me a flowchart, user login process"
+});
+```
+
+**Environment Variables:**
+- `OPENAI_PROMPT_ID`: Your stored prompt ID (e.g., `pmpt_6925efc645008196aef1bed0c7ea4c4b0e39ebb9f904648c`)
+- `OPENAI_PROMPT_VERSION`: Version number (default: `"4"`)
+
+**How It Works:**
+- The system constructs a full prompt: `"Create for me a {diagramType}, {user's prompt}"`
+- Example: `"Create for me a sequence diagram, user authentication flow"`
+- This full prompt is sent as the `input` parameter to your stored prompt
+- Your stored prompt then interprets the request and generates the Mermaid diagram
+
+**Benefits of Stored Prompts:**
+- Version control for prompts on OpenAI platform
+- A/B testing different prompt variations
+- Easier prompt optimization without code changes
+- Centralized prompt management across multiple services
+- Built-in prompt analytics and monitoring
+
+---
+
+**Fallback Configuration (Chat Completions API):**
+
+If `OPENAI_PROMPT_ID` is not set, the system uses the standard Chat Completions API:
+
+**Inline System Prompt:**
+```
+"You are a helpful assistant that generates valid Mermaid.js diagram code. 
+Return ONLY the mermaid code, no markdown fencing, no explanation."
+```
+
+**Model Configuration:**
+- Model: `gpt-4`
+- Max Tokens: `500`
+- API: `openai.chat.completions.create()`
+
+**Location:** `backend/controllers/diagramController.js`
 
 ## Development
 

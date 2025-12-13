@@ -47,7 +47,7 @@ const validateMermaidSyntax = async (mermaidCode) => {
       if (element) {
         element.remove()
       }
-      return true
+    return true
     } catch (renderError) {
       // Silently fail - don't expose Mermaid syntax errors to user
       // Clean up any error elements that Mermaid might have created
