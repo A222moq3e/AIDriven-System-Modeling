@@ -20,12 +20,20 @@ npm install
 
 2. Create a `.env` file (optional):
 ```env
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:5000
 VITE_USE_MOCK=false
 ```
 
-- `VITE_API_URL`: Backend API URL (default: `http://localhost:3000`)
+- `VITE_API_URL`: Backend API URL 
+  - **Development**: `http://localhost:5000` (default)
+  - **Production with nginx proxy**: Leave empty or set to `''` to use relative URLs (recommended)
+  - **Production without proxy**: Set to your full backend URL (e.g., `https://api.yourdomain.com`)
 - `VITE_USE_MOCK`: Set to `true` to always use mock data, `false` to try backend first (default: `false`)
+
+**Note for Production Deployment:**
+- When using nginx with `/api/` proxy, leave `VITE_API_URL` empty or unset
+- The frontend will automatically use relative URLs (`/api/...`) in production mode
+- This ensures requests go through your nginx proxy correctly
 
 ## Development
 

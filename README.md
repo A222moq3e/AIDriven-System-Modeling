@@ -137,8 +137,13 @@ The backend API will be available at `http://localhost:5000`.
 
 **Frontend** (`frontend/.env`):
 ```env
+# Development
 VITE_API_URL=http://localhost:5000
 VITE_USE_MOCK=false
+
+# Production with nginx proxy (leave empty or unset to use relative URLs)
+# VITE_API_URL=
+# VITE_USE_MOCK=false
 ```
 
 **Backend** (`backend/.env`):

@@ -2,7 +2,9 @@ import { getMockMermaidResponse } from './mockData'
 import mermaid from 'mermaid'
 
 // Get API URL from environment variable or use default
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+// In production with nginx proxy, use relative URL (empty string or '/api')
+// In development, use full URL like 'http://localhost:5000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:5000')
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 const AUTH_STORAGE_KEY = 'authSession'
 const MAX_RETRIES = 5
