@@ -139,6 +139,89 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
     setZoomLevel(1)
   }
 
+  const handleExportPNG = async () => {
+    if (!diagramRef.current || !showDiagram) {
+      return
+    }
+
+    try {
+      const svgElement = diagramRef.current.querySelector('svg')
+      if (!svgElement) {
+        console.error('No SVG element found')
+        return
+      }
+
+      // Clone the SVG to avoid modifying the original
+      const clonedSvg = svgElement.cloneNode(true)
+      
+      // Get the actual SVG dimensions from viewBox or width/height
+      const viewBox = clonedSvg.viewBox?.baseVal
+      const svgWidth = viewBox?.width || clonedSvg.width?.baseVal?.value || 800
+      const svgHeight = viewBox?.height || clonedSvg.height?.baseVal?.value || 600
+
+      // Set explicit dimensions on cloned SVG
+      clonedSvg.setAttribute('width', svgWidth)
+      clonedSvg.setAttribute('height', svgHeight)
+      clonedSvg.setAttribute('style', '')
+      
+      // Serialize SVG to string
+      const svgData = new XMLSerializer().serializeToString(clonedSvg)
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+      const svgUrl = URL.createObjectURL(svgBlob)
+
+      // Create an image to load the SVG
+      const img = new Image()
+      
+      await new Promise((resolve, reject) => {
+        img.onload = () => {
+          // Create canvas
+          const canvas = document.createElement('canvas')
+          canvas.width = svgWidth
+          canvas.height = svgHeight
+          const ctx = canvas.getContext('2d')
+          
+          // Fill white background
+          ctx.fillStyle = 'white'
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
+          
+          // Draw SVG image on canvas
+          ctx.drawImage(img, 0, 0)
+          
+          // Convert canvas to PNG blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              // Create download link
+              const url = URL.createObjectURL(blob)
+              const link = document.createElement('a')
+              link.href = url
+              link.download = `diagram-${Date.now()}.png`
+              document.body.appendChild(link)
+              link.click()
+              document.body.removeChild(link)
+              
+              // Clean up
+              URL.revokeObjectURL(url)
+              URL.revokeObjectURL(svgUrl)
+              resolve()
+            } else {
+              reject(new Error('Failed to create PNG blob'))
+            }
+          }, 'image/png')
+        }
+        
+        img.onerror = () => {
+          URL.revokeObjectURL(svgUrl)
+          reject(new Error('Failed to load SVG'))
+        }
+        
+        img.src = svgUrl
+      })
+    } catch (error) {
+      console.error('Error exporting PNG:', error)
+      alert('Failed to export diagram as PNG. Please try again.')
+    }
+  }
+
   // Determine what to show (moved before useEffects that use it)
   const showLoading = (isLoading || isRendering) && !mermaidCode
   const showError = (error || renderError) && !isLoading && !isRendering
@@ -213,6 +296,18 @@ export function MermaidDiagram({ mermaidCode, isLoading, error }) {
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+          </Button>
+          <div className="h-px bg-border my-1" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleExportPNG}
+            className="h-8 w-8"
+            title="Export as PNG"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5m0 0l-4.5-4.5m4.5 4.5l4.5-4.5" />
             </svg>
           </Button>
         </div>

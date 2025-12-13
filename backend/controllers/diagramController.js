@@ -118,7 +118,7 @@ export const generateDiagram = async (req, res) => {
     
     console.log('Extracted mermaidCode type:', typeof mermaidCode);
     console.log('Extracted mermaidCode length:', mermaidCode?.length || 0);
-    console.log('Extracted mermaidCode preview:', mermaidCode?.substring(0, 100) || 'empty');
+    console.log('Extracted mermaidCode preview:', mermaidCode || 'empty');
     
     // Clean up if the AI adds markdown backticks by mistake
     const cleanCode = mermaidCode.trim().replace(/^```mermaid\n?/, '').replace(/```$/, '');
