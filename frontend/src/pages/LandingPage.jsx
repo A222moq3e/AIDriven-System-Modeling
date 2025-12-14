@@ -662,7 +662,6 @@ export function LandingPage() {
       <TestimonialsSection />
       <FaqSection />
       <CtaSection />
-      <Footer />
     </div>
   )
 }
