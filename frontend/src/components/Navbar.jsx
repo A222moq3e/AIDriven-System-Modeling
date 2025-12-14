@@ -27,7 +27,7 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <h1 
             className="text-lg font-semibold cursor-pointer hover:text-primary transition-colors" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/app')}
           >
             AI System Modeling Generator
           </h1>
@@ -77,4 +77,3 @@ export function Navbar() {
     </nav>
   )
 }
-
