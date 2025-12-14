@@ -17,7 +17,7 @@ connectDB().catch((error) => {
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: '*' })); // Allow requests from any origin
 app.use(express.json()); // For parsing application/json
 app.use(requestLogger); // Request logging middleware
 
