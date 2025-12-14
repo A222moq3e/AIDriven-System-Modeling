@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { LandingPage } from './pages/LandingPage'
 import './index.css'
 
 function App() {
@@ -14,10 +15,12 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route
-            path="/"
+            path="/app"
             element={
               <ProtectedRoute>
                 <div className="w-screen h-screen overflow-hidden bg-background">
@@ -57,4 +60,3 @@ function App() {
 }
 
 export default App
-
