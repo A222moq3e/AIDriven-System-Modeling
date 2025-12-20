@@ -22,3 +22,4 @@ desktop.ini
 
 # Misc root-level files
 *.log
+frontend/.env
